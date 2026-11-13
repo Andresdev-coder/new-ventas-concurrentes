@@ -22,23 +22,28 @@ Para estudiar el código, sigue esta ruta: `VentaController.registrar` valida la
 `VentaService.registrar` guarda y encola el trabajo, `VentaService.procesar` lo ejecuta en un cajero,
 y `InventarioService.descontar` resuelve de forma segura la competencia por el stock.
 
-## Ejecutar en local
-Requisito: instalar Docker Desktop y dejarlo iniciado. Docker descargara PostgreSQL, Java/Maven
-y sus dependencias la primera vez; no necesitas instalar Java ni Maven para levantar backend/base.
+## Ejecutar sin Docker (Java, Maven y PostgreSQL instalados)
 
-En la raiz del proyecto:
+Docker es opcional. El backend ya está configurado para conectarse a PostgreSQL local en
+`localhost:5432`, base `ventas`, usuario `ventas` y contraseña `ventas`.
 
-```bash
-docker compose up --build
-```
+1. Instala **Java 17**, **Maven 3.9+**, **PostgreSQL 16** y **Node.js 18+**.
+2. Inicia el servicio de PostgreSQL. Desde pgAdmin abre Query Tool conectado a la base
+   `postgres` como administrador. En `backend/local-db.sql`, ejecuta primero el bloque `DO`;
+   crea el usuario `ventas` o corrige su contraseña si ya existía. Luego ejecuta `CREATE DATABASE`
+   por separado solo si esa base aún no existe, ya que PostgreSQL no permite crear bases dentro
+   de una transacción. La aplicación local espera el usuario y la contraseña `ventas`.
+3. En una terminal de VS Code, inicia el backend:
 
-Esto levanta PostgreSQL en `localhost:5432` y el backend en `http://localhost:8080`.
-La base crea las tablas y carga el inventario inicial automaticamente. Los datos quedan
-guardados en el volumen `postgres_data` cuando detienes o reinicias los contenedores.
-Para detenerlos: `docker compose down`. Para borrar tambien la base y empezar de cero:
-`docker compose down -v` (esto elimina los datos guardados).
+   ```powershell
+   cd backend
+   mvn spring-boot:run
+   ```
 
-Frontend (necesita Node.js 18 o superior y npm):
+   Al iniciar, Spring ejecuta `schema.sql` y `data.sql`: crea las tablas y carga el inventario
+   inicial. Abre `http://localhost:8080` para el backend. Mantén esa terminal abierta.
+
+4. En una segunda terminal, inicia la interfaz:
 
 ```bash
 cd frontend
@@ -47,8 +52,32 @@ npm run dev
 ```
 
 Abre `http://localhost:5173`. No hay que crear `.env` para desarrollo local; la app usa la API
-en `localhost:8080`. `package.json` declara las dependencias de React y Vite, y `npm install`
-las descarga en `frontend/node_modules`.
+en `localhost:8080`. `npm install` descarga las dependencias de React y Vite.
+
+Si PostgreSQL usa otros datos, define estas variables antes de iniciar el backend:
+
+```powershell
+$env:SPRING_DATASOURCE_URL = "jdbc:postgresql://localhost:5432/ventas"
+$env:SPRING_DATASOURCE_USERNAME = "ventas"
+$env:SPRING_DATASOURCE_PASSWORD = "ventas"
+mvn spring-boot:run
+```
+
+Para detenerlo, presiona `Ctrl+C` en cada terminal. Si usas pgAdmin para reiniciar el inventario,
+ten en cuenta que `data.sql` solo inserta productos faltantes; no repone el stock ya vendido.
+
+## Ejecutar con Docker (opcional)
+
+Si prefieres no instalar Java, Maven ni PostgreSQL, instala e inicia Docker Desktop y desde la
+raíz del proyecto corre:
+
+```bash
+docker compose up --build
+```
+
+Esto levanta PostgreSQL en `localhost:5432` y el backend en `http://localhost:8080`. Los datos
+persisten en el volumen `postgres_data`. Para detenerlos: `docker compose down`; para borrar
+también la base: `docker compose down -v`.
 
 ## Endpoints
 GET  /api/productos
